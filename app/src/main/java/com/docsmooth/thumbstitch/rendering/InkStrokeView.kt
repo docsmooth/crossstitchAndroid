@@ -17,6 +17,7 @@ import com.docsmooth.thumbstitch.input.StrokeSample
  * class; callers observe input only through [StrokeListener].
  */
 @SuppressLint("ViewConstructor")
+@OptIn(androidx.ink.brush.ExperimentalInkCustomBrushApi::class)
 class InkStrokeView(
     context: Context,
     var listener: StrokeListener? = null,
