@@ -84,6 +84,22 @@ class PatternParserTest {
         assertEquals(1, pattern.rows.single().colorIndexAt(4095))
     }
 
+    @Test
+    fun rejectsOversizedInputAndRows() {
+        val oversizedInputs = listOf(
+            " ".repeat(8 * 1024 * 1024) + valid,
+            valid.replace("0x4", "0".repeat(4096 * 9) + "x4"),
+        )
+        oversizedInputs.forEach { input ->
+            try {
+                PatternParser.parse(input.reader())
+                fail("Expected size limit failure")
+            } catch (expected: InvalidPatternException) {
+                assertTrue(expected.message!!.contains("too long") || expected.message!!.contains("exceeds"))
+            }
+        }
+    }
+
     @Test(expected = IndexOutOfBoundsException::class)
     fun rejectsColumnOutsideRow() {
         PatternParser.parse(valid.reader()).rows[0].colorIndexAt(4)
