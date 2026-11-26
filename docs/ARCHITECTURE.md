@@ -334,26 +334,61 @@ Pattern definitions should initially ship as versioned app assets, preferably JS
 
 ## 13. Pattern asset format
 
-Example conceptual JSON:
+V1 uses independently run-length-encoded rows rather than one object per
+stitch. A stitch is a square grid cell, not a screen pixel. The built-in
+heart lives at `app/src/main/assets/patterns/heart.json`. Example:
 
 ```json
 {
   "schemaVersion": 1,
   "id": "heart-001",
+  "revision": 1,
   "name": "Heart",
-  "width": 20,
-  "height": 20,
+  "width": 4,
+  "height": 2,
   "palette": [
     { "id": "red", "argb": "#FFE53935", "name": "Red" }
   ],
   "rows": [
-    "....................",
-    ".....RR....RR......."
+    "0x4",
+    "0x1 1x2 0x1"
   ]
 }
 ```
 
-The actual schema should favor easy hand-authoring and validation. Add a JSON Schema later if external/imported patterns become a feature.
+The format contract:
+
+- All fields shown are required; unknown or duplicate fields, trailing content,
+  malformed JSON, and unsupported schema versions are errors. Field order is
+  not significant.
+- `id` is the stable pattern identity, and positive integer `revision` identifies
+  its content revision. Increment the revision for changes affecting progress;
+  saves must identify both. `schemaVersion` versions the file format separately.
+- `id`, `name`, and each palette `id` and `name` are nonblank strings of at most
+  256 characters. Palette IDs are unique. `argb` is `#` followed by eight hex
+  digits in alpha-red-green-blue order.
+- Width and height are integers from 1 to 4096. `rows` contains exactly `height`
+  strings, top to bottom. Columns go left to right. A row is space-separated
+  `indexxcount` runs, such as `0x4` for four empty cells. Index 0 is empty;
+  indexes 1 through the palette size refer to entries in array order. Counts
+  are positive decimal integers and their sum must equal the width. Adjacent
+  runs may have the same index.
+- The palette can have 0–256 entries. A colored cell is a full cross-stitch
+  target; player progress on its two diagonal legs is stored separately.
+  Dimensions, indexes and counts are independent of zoom and display resolution.
+- The loader limits the source to 8,388,608 characters, each encoded row to
+  36,864 characters, and the pattern to 1,000,000 runs. It rejects invalid
+  content with an `InvalidPatternException`; built-in asset errors include the
+  asset path. It never silently substitutes an empty pattern.
+
+The in-memory representation retains runs, rather than allocating an object per
+cell. JSON is read sequentially; independent rows do not provide random access
+to the file. The limits bound resource use, so a noisy 4096×4096 image may need
+downsampling or a future format. A future importer can crop/resize and quantize
+an image to a palette and the same grid, leaving the original image and import
+settings separate. Photo picking and conversion are not part of v1. A future
+schema version can add other encodings or stitch types without changing v1.
+Gson is used for strict streaming JSON parsing on Android and the JVM.
 
 ## 14. State management
 
